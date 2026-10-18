@@ -1,0 +1,53 @@
+{
+  "name": "rafiq-personal",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "playwright test",
+    "api": "node --watch server/index.mjs",
+    "api:start": "node server/index.mjs",
+    "android:sync": "npm run build && cap sync android",
+    "format": "prettier --write \"src/**/*.{ts,tsx,mjs,css}\" \"server/*.mjs\" \"tests/*.ts\" *.ts *.json index.html"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "type": "module",
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/share": "^8.0.3",
+    "@capgo/capacitor-health": "^8.11.12",
+    "@capgo/capacitor-speech-recognition": "^8.4.4",
+    "@fontsource/ibm-plex-sans-arabic": "^5.3.0",
+    "@google/genai": "^2.30.0",
+    "@supabase/supabase-js": "^2.118.0",
+    "express": "^5.3.0",
+    "idb": "^8.0.4",
+    "lucide-react": "^1.59.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
+    "@playwright/test": "^1.64.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "prettier": "^3.9.10",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "^11.1.1"
+    }
+  },
+  "private": true
+}

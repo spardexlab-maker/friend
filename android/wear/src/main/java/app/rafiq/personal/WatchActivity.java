@@ -1,0 +1,34 @@
+package app.rafiq.personal;
+
+import android.app.Activity;
+import android.os.*;
+import android.graphics.Color;
+import android.view.Gravity;
+import android.widget.*;
+import android.text.InputType;
+import com.google.android.gms.wearable.*;
+import org.json.*;
+import java.util.UUID;
+
+public class WatchActivity extends Activity implements DataClient.OnDataChangedListener {
+    JSONObject plan=new JSONObject();int selected=0;LinearLayout layout;TextView status,timer;EditText weight,reps;CountDownTimer countdown;
+    final int GREEN=Color.rgb(212,239,156),BG=Color.rgb(16,21,19);
+    @Override public void onCreate(Bundle state){super.onCreate(state);try{plan=new JSONObject(getPreferences(0).getString("plan","{}"));}catch(Exception ignored){}render();}
+    @Override public void onResume(){super.onResume();Wearable.getDataClient(this).addListener(this);Wearable.getDataClient(this).getDataItems().addOnSuccessListener(items->{try{for(DataItem item:items)read(item);}finally{items.release();}});}
+    @Override public void onPause(){Wearable.getDataClient(this).removeListener(this);super.onPause();}
+    void read(DataItem item){if(!"/rafiq/plan".equals(item.getUri().getPath()))return;try{JSONObject next=new JSONObject(DataMapItem.fromDataItem(item).getDataMap().getString("json"));boolean changed=!next.optString("sessionId").equals(plan.optString("sessionId"));plan=next;getPreferences(0).edit().putString("plan",plan.toString()).apply();if(changed)selected=0;runOnUiThread(()->{if(!getWindow().getDecorView().hasFocus()||changed)render();});}catch(Exception ignored){}}
+    @Override public void onDataChanged(DataEventBuffer events){for(DataEvent e:events)if(e.getType()==DataEvent.TYPE_CHANGED)read(e.getDataItem());}
+    TextView text(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setGravity(Gravity.CENTER);t.setPadding(0,5,0,5);layout.addView(t);return t;}
+    Button button(String s,Runnable action){Button b=new Button(this);b.setText(s);b.setTextSize(12);b.setTextColor(BG);b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(GREEN));b.setOnClickListener(v->action.run());LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,48);lp.setMargins(0,6,0,3);layout.addView(b,lp);return b;}
+    EditText number(String hint,double value){EditText e=new EditText(this);e.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);e.setHint(hint);e.setText(String.valueOf(value));e.setTextColor(Color.WHITE);e.setTextSize(18);e.setGravity(Gravity.CENTER);layout.addView(e,new LinearLayout.LayoutParams(-1,50));return e;}
+    void render(){ScrollView scroll=new ScrollView(this);scroll.setBackgroundColor(BG);layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);layout.setPadding(28,28,28,40);scroll.addView(layout);setContentView(scroll);text("رفيق",22,GREEN);text(plan.optString("name","افتح رفيق على موبايلك"),14,Color.WHITE);
+        JSONArray exercises=plan.optJSONArray("exercises");if(exercises!=null&&exercises.length()>0){selected=Math.min(selected,exercises.length()-1);JSONObject ex=exercises.optJSONObject(selected);text((selected+1)+" / "+exercises.length(),10,Color.LTGRAY);text(ex.optString("name"),16,Color.WHITE);text(ex.optString("sets")+" × "+ex.optString("reps")+" · "+ex.optString("unit")+" · "+ex.optString("basis"),10,Color.LTGRAY);weight=number("الوزن",Double.parseDouble(getPreferences(0).getString("weight-"+ex.optString("id"),String.valueOf(ex.optDouble("weight",0)))));reps=number("التكرارات",Double.parseDouble(getPreferences(0).getString("reps-"+ex.optString("id"),"10")));
+        button("سجّل الجولة",()->{try{double w=Double.parseDouble(weight.getText().toString()),r=Double.parseDouble(reps.getText().toString());if(w<0||w>2000||r<1||r>300||r!=Math.floor(r)){status.setText("راجع الوزن والتكرارات");return;}JSONObject event=new JSONObject();event.put("type","set");event.put("sessionId",plan.getString("sessionId"));event.put("exerciseId",ex.getString("id"));event.put("name",ex.getString("name"));event.put("unit",ex.getString("unit"));event.put("basis",ex.getString("basis"));event.put("weight",w);event.put("reps",r);send(event);getPreferences(0).edit().putString("weight-"+ex.optString("id"),String.valueOf(w)).putString("reps-"+ex.optString("id"),String.valueOf(r)).apply();startRest(ex.optInt("rest",90));}catch(Exception e){status.setText("أدخل أرقاماً صحيحة");}});
+        timer=text("راحة",16,GREEN);button("ابدأ راحة",()->startRest(ex.optInt("rest",90)));button("التمرين التالي ←",()->{selected=(selected+1)%exercises.length();render();});button("→ التمرين السابق",()->{selected=(selected+exercises.length()-1)%exercises.length();render();});}
+        button("تحديث عرض الخطة",this::render);text("أكلت "+plan.optInt("kcal",0)+" / "+plan.optInt("goal",0)+" سعرة",11,Color.LTGRAY);text("الماي "+plan.optInt("water",0)+" مل",11,Color.LTGRAY);button("+ 250 مل ماي",()->{try{JSONObject event=new JSONObject();event.put("type","water");event.put("ml",250);send(event);}catch(Exception ignored){}});status=text("الحفظ يتزامن مع الموبايل عند الاتصال",10,Color.LTGRAY);
+    }
+    void send(JSONObject event)throws JSONException {String id=UUID.randomUUID().toString();event.put("id",id);event.put("time",java.time.Instant.now().toString());PutDataMapRequest map=PutDataMapRequest.create("/rafiq/event/"+id);map.getDataMap().putString("json",event.toString());Wearable.getDataClient(this).putDataItem(map.asPutDataRequest().setUrgent()).addOnSuccessListener(x->{status.setText("انحفظ للمزامنة ✓");vibrate();}).addOnFailureListener(e->status.setText("تعذر الحفظ؛ جرّب مرة ثانية"));}
+    void startRest(int seconds){if(countdown!=null)countdown.cancel();countdown=new CountDownTimer(Math.max(1,seconds)*1000L,1000){public void onTick(long n){if(timer!=null)timer.setText((n/60000)+":"+String.format(java.util.Locale.US,"%02d",(n/1000)%60));}public void onFinish(){if(timer!=null)timer.setText("جاهز للجولة؟");vibrate();}}.start();}
+    void vibrate(){android.os.Vibrator v=(android.os.Vibrator)getSystemService(VIBRATOR_SERVICE);if(v!=null)v.vibrate(VibrationEffect.createOneShot(180,VibrationEffect.DEFAULT_AMPLITUDE));}
+    @Override public void onDestroy(){if(countdown!=null)countdown.cancel();super.onDestroy();}
+}

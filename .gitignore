@@ -1,0 +1,13 @@
+node_modules/
+dist/
+tmp/
+test-results/
+playwright-report/
+.env*
+android/.gradle/
+android/local.properties
+android/**/build/
+server/private/
+output/
+
+!.env.example

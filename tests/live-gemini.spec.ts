@@ -1,0 +1,32 @@
+import {test,expect} from '@playwright/test';
+test('live Gemini completes a reviewed water entry using synthetic data only',async({page})=>{
+ test.skip(process.env.RUN_LIVE_AI!=='1','Explicit live API test only; uses the configured Google account.');
+ test.setTimeout(120000);
+ await page.goto('/');
+ await expect(page.locator('.ring strong')).toBeVisible();
+ await page.evaluate(async()=>{
+   const {initialState}=await import('/src/domain.ts');
+   const {persist}=await import('/src/storage.ts');
+   const s=initialState();
+   s.profile={name:'اختبار تقني',height:175,age:30,sex:'male',activity:1.2,dayStart:0,notes:'بيانات اختبار اصطناعية بالكامل، وليست بيانات المستخدم'};
+   s.weights=[];s.plans=s.plans.map(p=>({...p,exercises:[]}));s.goals={kcal:2000,restKcal:1800,protein:100,carbs:200,fat:60,water:2000};
+   await persist(s);
+ });
+ await page.reload();
+ await page.locator('.sidebar').getByRole('button',{name:/^رفيقي/}).click();
+ await page.getByRole('button',{name:'الاتصال',exact:true}).click();
+ await page.getByRole('button',{name:'فحص الاتصال وجلب النماذج'}).click();
+ await expect(page.getByRole('status')).toContainText('الاتصال نجح',{timeout:20000});
+ await page.getByLabel('نموذج Gemini').fill('gemini-3.8-flash');
+ await page.getByRole('checkbox').check();
+ await page.getByRole('button',{name:'حفظ الإعدادات'}).click();
+ await page.getByLabel('رسالتك لرفيق').fill('هذه تجربة تقنية ببيانات اصطناعية. شربت الآن 500 مل ماء عادي في يومي الحالي، والمصدر تسجيل يدوي. كل التفاصيل المطلوبة متوفرة؛ جهّز اقتراح تسجيل الماء بكمية 500 مل للمراجعة.');
+ await page.getByRole('button',{name:'إرسال الرسالة'}).click();
+ await page.getByRole('button',{name:'راجع تفاصيل الاقتراح وسجّله'}).click({timeout:90000});
+ await page.getByRole('button',{name:'راجع بالنموذج وسجّل'}).click();
+ await expect(page.getByLabel('الكمية (مل)')).toHaveValue('500');
+ await page.getByRole('button',{name:'حفظ',exact:true}).click();
+ await expect(page.getByRole('button',{name:'تم تسجيل الاقتراح'})).toBeDisabled();
+ await page.locator('.sidebar').getByRole('button',{name:'يومي',exact:true}).click();
+ await expect(page.locator('.water .metric-value')).toContainText('0.5');
+});
