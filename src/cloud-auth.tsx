@@ -129,7 +129,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 const { data, error } = await supabase.auth.signUp({
                   email: email.trim(),
                   password,
-                  options: { emailRedirectTo: window.location.origin },
+                  options: {
+                    emailRedirectTo: "https://friend-delta-blue.vercel.app/",
+                  },
                 });
                 if (error) throw error;
                 if (!data.session)
@@ -217,7 +219,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
             setBusy(true);
             const { error } = await supabase.auth.resetPasswordForEmail(
               email.trim(),
-              { redirectTo: window.location.origin + "/?recovery=1" },
+              {
+                redirectTo: "https://friend-delta-blue.vercel.app/?recovery=1",
+              },
             );
             setBusy(false);
             if (error) setError("تعذر إرسال رابط استعادة كلمة المرور");

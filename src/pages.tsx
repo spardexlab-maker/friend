@@ -1,3 +1,4 @@
+import { UpdatePanel } from "./updates";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Activity,
@@ -1387,6 +1388,7 @@ export function SettingsPage() {
   return (
     <>
       <AccountPanel />
+      <UpdatePanel />
       <div className="settings-grid">
         <Card title="ملفك وأهدافك">
           <p>

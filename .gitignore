@@ -11,3 +11,5 @@ server/private/
 output/
 
 !.env.example
+
+supabase/.temp/

@@ -1,8 +1,11 @@
+import defaults from "./cloud-public.json";
 import { createClient } from "@supabase/supabase-js";
-const url = import.meta.env.VITE_SUPABASE_URL ?? "";
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
+const url = import.meta.env.VITE_SUPABASE_URL || defaults.url;
+const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || defaults.key;
 export const cloudEnabled =
-  import.meta.env.VITE_CLOUD_ENABLED === "true" && Boolean(url && key);
+  (import.meta.env.VITE_CLOUD_ENABLED
+    ? import.meta.env.VITE_CLOUD_ENABLED === "true"
+    : import.meta.env.PROD) && Boolean(url && key);
 export const supabase =
   url && key
     ? createClient(url, key, {

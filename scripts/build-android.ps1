@@ -11,6 +11,6 @@ if ($LASTEXITCODE -ne 0) { throw 'Android sync failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Android build failed' }
 $outputDir = Join-Path $projectRoot 'output/android'
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
-Copy-Item -LiteralPath 'android/app/build/outputs/apk/debug/app-debug.apk' -Destination (Join-Path $outputDir 'Rafiq-phone-debug.apk')
-Copy-Item -LiteralPath 'android/wear/build/outputs/apk/debug/wear-debug.apk' -Destination (Join-Path $outputDir 'Rafiq-watch-debug.apk')
+Copy-Item -LiteralPath 'android/app/build/outputs/apk/debug/app-debug.apk' -Destination (Join-Path $outputDir 'Rafiq-phone.apk')
+Copy-Item -LiteralPath 'android/wear/build/outputs/apk/debug/wear-debug.apk' -Destination (Join-Path $outputDir 'Rafiq-watch.apk')
 Write-Output "APKs saved to $outputDir"

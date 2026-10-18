@@ -1,3 +1,4 @@
+def rafiqVersion = new groovy.json.JsonSlurper().parse(rootProject.file("../src/version.json"))
 apply plugin: 'com.android.application'
 android {
     namespace 'app.rafiq.personal'
@@ -6,9 +7,10 @@ android {
         applicationId 'app.rafiq.personal'
         minSdk 30
         targetSdk 36
-        versionCode 1
-        versionName '1.0'
+        versionCode rafiqVersion.code
+        versionName rafiqVersion.name
     }
+    sourceSets { main { java.srcDirs += ["../shared"] } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }
 }
 dependencies { implementation 'com.google.android.gms:play-services-wearable:20.0.1' }
