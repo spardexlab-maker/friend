@@ -9,6 +9,7 @@ import "@fontsource/ibm-plex-sans-arabic/600.css";
 import "@fontsource/ibm-plex-sans-arabic/700.css";
 import "./style.css";
 import "./enhancements.css";
+import "./performance.css";
 function SessionApp() {
   const { user } = useCloudAuth();
   return (

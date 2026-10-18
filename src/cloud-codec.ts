@@ -23,12 +23,15 @@ const lists = [
   "messages",
   "audit",
   "journal",
+  "checkins",
+  "sensorReadings",
 ] as const;
 export function flatten(s: State) {
   const out: Record<string, unknown> = {
     profile: s.profile,
     goals: s.goals,
     memory: s.memory,
+    wellness: s.wellness,
     currentSession: { session: s.session, sessionId: s.sessionId },
   };
   for (const list of lists)
@@ -42,6 +45,7 @@ export function flatten(s: State) {
     ([key, value]) => (out[`overrides:${key}`] = value),
   );
   s.restDates.forEach((date) => (out[`restDates:${date}`] = date));
+  for (const h of s.healthHistory) if (h.date) out[`health:${h.date}`] = h;
   if (s.health.date) out[`health:${s.health.date}`] = s.health;
   return out;
 }
@@ -81,6 +85,9 @@ export function hydrate(
     messages: [],
     audit: [],
     journal: [],
+    checkins: [],
+    sensorReadings: [],
+    healthHistory: [],
     overrides: {},
     restDates: [],
   };
@@ -91,6 +98,8 @@ export function hydrate(
     const key = tail.join(":");
     if (category === "profile") s.profile = d.payload as State["profile"];
     else if (category === "goals") s.goals = d.payload as State["goals"];
+    else if (category === "wellness")
+      s.wellness = d.payload as State["wellness"];
     else if (category === "memory") s.memory = String(d.payload);
     else if (category === "currentSession") {
       const c = d.payload as { session: number; sessionId: string };
@@ -109,6 +118,7 @@ export function hydrate(
     else if (category === "restDates") s.restDates.push(String(d.payload));
     else if (category === "health") {
       const h = d.payload as State["health"];
+      s.healthHistory.push(h);
       if (h.syncedAt >= s.health.syncedAt) s.health = h;
     } else if (lists.includes(category as (typeof lists)[number])) {
       const value = d.payload as Record<string, unknown>;

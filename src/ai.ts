@@ -1,8 +1,9 @@
+import { recovery, sleepCoach, zoneMinutes } from "./insights";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { system } from "./gemini-prompt.mjs";
 import { z } from "zod";
 import type { Message, State } from "./domain";
-import {cloudEnabled,cloudApi} from './cloud-client';
+import { cloudEnabled, cloudApi } from "./cloud-client";
 export const GoogleBridge = registerPlugin<{
   status: () => Promise<{
     configured: boolean;
@@ -18,7 +19,13 @@ export const GoogleBridge = registerPlugin<{
   }) => Promise<{ reply: string; proposal: unknown }>;
 }>("GoogleBridge");
 export async function api(s: State, path: string, init: RequestInit = {}) {
-  if(cloudEnabled){if(path==='personal-memory')throw Error('استورد ملف الذاكرة من جهازك؛ الملفات المحلية على الكمبيوتر لا تُنشر تلقائياً');return cloudApi(path,init.body?JSON.parse(String(init.body)):{});}
+  if (cloudEnabled) {
+    if (path === "personal-memory")
+      throw Error(
+        "استورد ملف الذاكرة من جهازك؛ الملفات المحلية على الكمبيوتر لا تُنشر تلقائياً",
+      );
+    return cloudApi(path, init.body ? JSON.parse(String(init.body)) : {});
+  }
   if (Capacitor.isNativePlatform() && !s.settings.apiUrl) {
     if (path === "status") return GoogleBridge.status();
     if (path === "models") return GoogleBridge.models();
@@ -101,7 +108,26 @@ export function aiContext(s: State) {
       exercises: s.overrides[s.sessionId] ?? s.plans[s.session].exercises,
     },
     journal: s.journal.slice(-40),
-    health: s.health,
+    health: { ...s.health, samples: [] },
+    healthHistory: s.healthHistory.slice(-28).map(({ samples: _, ...h }) => h),
+    wellness: s.wellness,
+    checkins: s.checkins.slice(-28),
+    experimentalInsights: {
+      date: s.health.date || new Date().toISOString().slice(0, 10),
+      recovery: recovery(
+        s,
+        s.health.date || new Date().toISOString().slice(0, 10),
+      ),
+      sleep: sleepCoach(
+        s,
+        s.health.date || new Date().toISOString().slice(0, 10),
+      ),
+      effort: zoneMinutes(
+        s,
+        s.health.date || new Date().toISOString().slice(0, 10),
+      ),
+      notice: "تقديرات رفيق التجريبية؛ ليست قياسات طبية أو خوارزميات WHOOP",
+    },
     photoMetadata: s.photos.map(({ data: _, ...p }) => p),
   });
 }

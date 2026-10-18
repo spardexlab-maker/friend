@@ -1,3 +1,4 @@
+import { useHealthRefresh } from "./health-refresh";
 import { cloudEnabled } from "./cloud-client";
 import {
   Activity,
@@ -36,6 +37,7 @@ const nav = [
 ];
 export function App() {
   useWearSync();
+  useHealthRefresh();
   const { s, tab, setTab, date, setDate, open } = useApp();
   const current = [
     ...nav,
@@ -139,7 +141,7 @@ export function App() {
             </button>
           </div>
         </header>
-        <div className="content">
+        <div className="content" key={tab}>
           <div className="intro">
             <div>
               <div className="eyebrow">

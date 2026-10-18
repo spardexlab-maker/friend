@@ -1,3 +1,4 @@
+import { recovery, dailyHealth } from "./insights";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { useEffect, useRef } from "react";
 import { z } from "zod";
@@ -10,6 +11,13 @@ type WearBridge = {
 };
 const bridge = registerPlugin<WearBridge>("WearBridge");
 const eventSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("heart"),
+    id: z.string(),
+    time: z.string().datetime(),
+    bpm: z.number().min(25).max(240),
+    accuracy: z.number().min(1).max(3),
+  }),
   z.object({
     type: z.literal("water"),
     id: z.string(),
@@ -44,6 +52,21 @@ export function useWearSync() {
       bridge
         .publish({
           json: JSON.stringify({
+            readiness: recovery(d, day).score ?? -1,
+            sleepPercent:
+              recovery(d, day).sleep.minutes == null
+                ? 0
+                : Math.min(
+                    100,
+                    (recovery(d, day).sleep.minutes! /
+                      (d.wellness.sleepGoal * 60)) *
+                      100,
+                  ),
+            sleepHours:
+              recovery(d, day).sleep.minutes == null
+                ? undefined
+                : (recovery(d, day).sleep.minutes! / 60).toFixed(1),
+            hrv: dailyHealth(d, day)?.values.heartRateVariability ?? undefined,
             name: d.plans[d.session].name,
             sessionId: d.sessionId,
             exercises: d.overrides[d.sessionId] ?? d.plans[d.session].exercises,
@@ -57,7 +80,19 @@ export function useWearSync() {
         .catch(() => {});
     }, 1200);
     return () => clearTimeout(t);
-  }, [s.sessionId, s.plans, s.overrides, s.meals, s.water, s.goals]);
+  }, [
+    s.sessionId,
+    s.plans,
+    s.overrides,
+    s.meals,
+    s.water,
+    s.goals,
+    s.health,
+    s.healthHistory,
+    s.sleep,
+    s.checkins,
+    s.wellness,
+  ]);
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     async function poll() {
@@ -78,9 +113,22 @@ export function useWearSync() {
                 ...d,
                 sets: [...d.sets],
                 water: [...d.water],
+                sensorReadings: [...d.sensorReadings],
               };
               for (const e of events) {
                 const date = dayKey(d.profile.dayStart, new Date(e.time));
+                if (
+                  e.type === "heart" &&
+                  !next.sensorReadings.some((x) => x.id === e.id)
+                )
+                  next.sensorReadings.push({
+                    id: e.id,
+                    date,
+                    time: e.time,
+                    bpm: e.bpm,
+                    accuracy: e.accuracy,
+                    source: "Galaxy Watch — حساس النبض",
+                  });
                 if (
                   e.type === "water" &&
                   !next.water.some((x) => x.id === e.id)

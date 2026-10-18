@@ -1,3 +1,6 @@
+import { TrainingIntelligence } from "./training-intelligence";
+import { SensorCoverage } from "./sensor-coverage";
+import { PerformanceHub, HealthInsights } from "./performance";
 import { UpdatePanel } from "./updates";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -68,6 +71,11 @@ export function Dashboard() {
   const h = s.health.date === date ? s.health.values : {};
   return (
     <>
+      <PerformanceHub />
+      <div className="section-line">
+        <h3>التغذية وخطة اليوم</h3>
+        <span className="caption">تفاصيلك تصنع الفرق</span>
+      </div>
       <div className="overview">
         <Card
           className="calories"
@@ -947,7 +955,14 @@ export function HealthPage() {
     setBusy(true);
     try {
       const health = await syncHealth(date, request);
-      change("مزامنة Health Connect", (d) => ({ ...d, health }));
+      await change("مزامنة Health Connect", (d) => ({
+        ...d,
+        health,
+        healthHistory: [
+          ...d.healthHistory.filter((h) => h.date !== health.date),
+          health,
+        ].sort((a, b) => a.date.localeCompare(b.date)),
+      }));
       notify("تحدّثت البيانات المتاحة. راجع الصلاحيات للحقول الناقصة.");
     } catch (e) {
       notify((e as Error).message);
@@ -1001,52 +1016,60 @@ export function HealthPage() {
           الخصوصية
         </a>
       </div>
-      <div className="stats-grid">
-        {[
-          ["steps", "الخطوات", "خطوة"],
-          ["heartRate", "متوسط النبض", "نبضة/د"],
-          ["restingHeartRate", "نبض الراحة", "نبضة/د"],
-          ["calories", "سعرات النشاط", "سعرة تقديرية"],
-          ["totalCalories", "إجمالي الحرق", "سعرة تقديرية"],
-          ["distance", "المسافة", "متر"],
-          ["sleep", "آخر جلسة نوم", "دقيقة"],
-          ["oxygenSaturation", "الأكسجين", "%"],
-          ["weight", "الوزن", "كغ"],
-          ["bodyFat", "نسبة الدهن من الجهاز", "%"],
-          ["vo2Max", "VO₂ max", "مل/كغ/د"],
-        ].map(([k, t, u]) => (
-          <Metric
-            key={k}
-            title={t}
-            icon={<Heart size={18} />}
-            value={values[k] == null ? "—" : format(values[k]!)}
-            unit={u}
-            detail="من Health Connect؛ يعتمد على البيانات المتاحة"
-          />
-        ))}
-      </div>
-      <p className="caption">
-        آخر مزامنة:{" "}
-        {s.health.syncedAt
-          ? new Date(s.health.syncedAt).toLocaleString("ar-IQ", {
-              timeZone: "Asia/Baghdad",
-            })
-          : "لم تتم بعد"}
-        . لا تعني المزامنة الناجحة أن كل الحقول متوفرة. حرق الكارديو المسجل
-        يدوياً لا يُجمع مع الإجمالي.
-      </p>
-      {s.health.errors.length > 0 && (
-        <details className="info-note">
-          <summary>
-            تفاصيل الحقول غير المتاحة ({s.health.errors.length})
-          </summary>
-          {s.health.errors.map((x) => (
-            <div dir="ltr" key={x}>
-              {x}
-            </div>
+      <SensorCoverage />
+      <HealthInsights />
+      <TrainingIntelligence />
+      <details className="raw-health">
+        <summary>كل القياسات ومصادرها</summary>
+        <div className="stats-grid">
+          {[
+            ["steps", "الخطوات", "خطوة"],
+            ["heartRate", "متوسط النبض", "نبضة/د"],
+            ["restingHeartRate", "نبض الراحة", "نبضة/د"],
+            ["heartRateVariability", "تباين النبض HRV", "مللي ثانية"],
+            ["respiratoryRate", "معدل التنفس", "نفس/د"],
+            ["calories", "سعرات النشاط", "سعرة تقديرية"],
+            ["totalCalories", "إجمالي الحرق", "سعرة تقديرية"],
+            ["distance", "المسافة", "متر"],
+            ["sleep", "النوم في يوم الاستيقاظ", "دقيقة"],
+            ["oxygenSaturation", "الأكسجين", "%"],
+            ["weight", "الوزن", "كغ"],
+            ["bodyFat", "نسبة الدهن من الجهاز", "%"],
+            ["vo2Max", "VO₂ max", "مل/كغ/د"],
+          ].map(([k, t, u]) => (
+            <Metric
+              key={k}
+              title={t}
+              icon={<Heart size={18} />}
+              value={values[k] == null ? "—" : format(values[k]!)}
+              unit={u}
+              detail="من Health Connect؛ يعتمد على البيانات المتاحة"
+            />
           ))}
-        </details>
-      )}
+        </div>
+        <p className="caption">
+          آخر مزامنة:{" "}
+          {s.health.syncedAt
+            ? new Date(s.health.syncedAt).toLocaleString("ar-IQ", {
+                timeZone: "Asia/Baghdad",
+              })
+            : "لم تتم بعد"}
+          . لا تعني المزامنة الناجحة أن كل الحقول متوفرة. حرق الكارديو المسجل
+          يدوياً لا يُجمع مع الإجمالي.
+        </p>
+        {s.health.errors.length > 0 && (
+          <details className="info-note">
+            <summary>
+              تفاصيل الحقول غير المتاحة ({s.health.errors.length})
+            </summary>
+            {s.health.errors.map((x) => (
+              <div dir="ltr" key={x}>
+                {x}
+              </div>
+            ))}
+          </details>
+        )}
+      </details>
       <div className="section-line">
         <h3>نومك اليدوي</h3>
         <button className="text-button" onClick={() => open("sleep")}>

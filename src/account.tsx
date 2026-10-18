@@ -126,6 +126,14 @@ export function AccountPanel() {
                     goals: local.goals,
                     plans: local.plans,
                     memory: local.memory || s.memory,
+                    wellness: local.wellness,
+                    healthHistory: [
+                      ...new Map(
+                        [...local.healthHistory, ...s.healthHistory].map(
+                          (h) => [h.date, h],
+                        ),
+                      ).values(),
+                    ],
                     restDates: [
                       ...new Set([...s.restDates, ...local.restDates]),
                     ],
@@ -142,6 +150,8 @@ export function AccountPanel() {
                     "messages",
                     "audit",
                     "journal",
+                    "checkins",
+                    "sensorReadings",
                   ] as const) {
                     (merged[key] as unknown[]) = [
                       ...new Map(

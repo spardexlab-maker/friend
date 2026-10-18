@@ -1,3 +1,4 @@
+import { summarizeSleep } from "./sleep-data";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { Health, type HealthDataType } from "@capgo/capacitor-health";
 import { SpeechRecognition } from "@capgo/capacitor-speech-recognition";
@@ -11,6 +12,8 @@ export const healthTypes: HealthDataType[] = [
   "totalCalories",
   "heartRate",
   "restingHeartRate",
+  "heartRateVariability",
+  "respiratoryRate",
   "sleep",
   "oxygenSaturation",
   "weight",
@@ -62,6 +65,17 @@ export async function syncHealth(
           result.values.totalCalories = (
             await extra.read({ start: startDate, end: endDate })
           ).value;
+        } else if (dataType === "heartRate") {
+          const { samples } = await Health.readSamples({
+            dataType,
+            startDate,
+            endDate,
+            limit: 500,
+          });
+          result.samples.push(...samples);
+          result.values.heartRate = samples.length
+            ? samples.reduce((sum, x) => sum + x.value, 0) / samples.length
+            : null;
         } else if (
           [
             "steps",
@@ -85,7 +99,7 @@ export async function syncHealth(
               : "sum",
           });
           result.values[dataType] = samples.length
-            ? dataType === "heartRate" || dataType === "restingHeartRate"
+            ? dataType === "restingHeartRate"
               ? samples.reduce((s, x) => s + x.value, 0) / samples.length
               : samples.reduce((s, x) => s + x.value, 0)
             : null;
@@ -108,13 +122,12 @@ export async function syncHealth(
             endDate,
             limit: 100,
           });
-          result.samples.push(...samples);
+          if (dataType !== "sleep") result.samples.push(...samples);
           if (dataType === "sleep") {
-            // Choose the latest sleep session rather than summing stages or duplicate sources.
-            const last = [...samples].sort((a, b) =>
-              b.endDate.localeCompare(a.endDate),
-            )[0];
-            result.values.sleep = last?.value ?? null;
+            const summarized = summarizeSleep(samples, date);
+            result.samples.push(...summarized.samples);
+            result.values.sleep = summarized.minutes;
+            result.values.sleepHasStages = summarized.hasStages ? 1 : 0;
           } else
             result.values[dataType] =
               [...samples].sort((a, b) => b.endDate.localeCompare(a.endDate))[0]

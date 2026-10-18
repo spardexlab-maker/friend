@@ -76,6 +76,13 @@ export const messageSchema = z.object({
   proposal: z.unknown().optional(),
   applied: z.boolean().optional(),
 });
+export const healthSchema = z.object({
+  syncedAt: z.string(),
+  date: z.string(),
+  values: z.record(z.string(), z.number().nullable()),
+  samples: z.array(z.unknown()),
+  errors: z.array(z.string()),
+});
 export const stateSchema = z.object({
   version: z.literal(2),
   profile: z.object({
@@ -149,13 +156,39 @@ export const stateSchema = z.object({
       after: z.string(),
     }),
   ),
-  health: z.object({
-    syncedAt: z.string(),
-    date: z.string(),
-    values: z.record(z.string(), z.number().nullable()),
-    samples: z.array(z.unknown()),
-    errors: z.array(z.string()),
-  }),
+  health: healthSchema,
+  healthHistory: z.array(healthSchema).default([]),
+  wellness: z
+    .object({
+      sleepGoal: z.number().min(6).max(10),
+      wakeTime: z.string().regex(/^\d{2}:\d{2}$/),
+    })
+    .default({ sleepGoal: 8, wakeTime: "07:00" }),
+  checkins: z
+    .array(
+      z.object({
+        ...base,
+        energy: z.number().int().min(1).max(5),
+        soreness: z.number().int().min(1).max(5),
+        stress: z.number().int().min(1).max(5),
+        caffeineLate: z.boolean(),
+        lateMeal: z.boolean(),
+        notes: z.string().max(2000),
+      }),
+    )
+    .default([]),
+  sensorReadings: z
+    .array(
+      z.object({
+        id: z.string(),
+        date,
+        time: z.string(),
+        bpm: z.number().min(25).max(240),
+        accuracy: z.number(),
+        source: z.string(),
+      }),
+    )
+    .default([]),
   settings: z.object({
     apiUrl: z.string(),
     token: z.string(),
@@ -195,6 +228,10 @@ export function initialState(): State {
       fat: 55,
       water: 3500,
     },
+    healthHistory: [],
+    checkins: [],
+    sensorReadings: [],
+    wellness: { sleepGoal: 8, wakeTime: "07:00" },
     journal: [],
     restDates: [],
     meals: [],
@@ -223,7 +260,7 @@ export function initialState(): State {
         unit: String(name).includes("باوند") ? "lb" : "kg",
         basis: String(name).includes("دمبل")
           ? "each"
-          : Number(weight) === 0
+          : String(english).includes("Bulgarian")
             ? "bodyweight"
             : "total",
       })),
