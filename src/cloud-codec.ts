@@ -25,6 +25,8 @@ const lists = [
   "journal",
   "checkins",
   "sensorReadings",
+  "mealTemplates",
+  "trainingDecisions",
 ] as const;
 export function flatten(s: State) {
   const out: Record<string, unknown> = {
@@ -88,6 +90,8 @@ export function hydrate(
     checkins: [],
     sensorReadings: [],
     healthHistory: [],
+    mealTemplates: [],
+    trainingDecisions: [],
     overrides: {},
     restDates: [],
   };

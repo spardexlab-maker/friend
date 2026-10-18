@@ -19,6 +19,8 @@ export const healthTypes: HealthDataType[] = [
   "weight",
   "bodyFat",
   "vo2Max",
+  "bloodPressure",
+  "bodyTemperature",
   "workouts",
 ];
 export async function syncHealth(
@@ -128,6 +130,12 @@ export async function syncHealth(
             result.samples.push(...summarized.samples);
             result.values.sleep = summarized.minutes;
             result.values.sleepHasStages = summarized.hasStages ? 1 : 0;
+          } else if (dataType === "bloodPressure") {
+            const last = [...samples].sort((a, b) =>
+              b.endDate.localeCompare(a.endDate),
+            )[0];
+            result.values.systolic = last?.systolic ?? null;
+            result.values.diastolic = last?.diastolic ?? null;
           } else
             result.values[dataType] =
               [...samples].sort((a, b) => b.endDate.localeCompare(a.endDate))[0]

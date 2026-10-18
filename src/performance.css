@@ -361,7 +361,7 @@ select {
   color: #8bc8ff;
 }
 .effort-gauge small {
-  font: 11px "IBM Plex Sans Arabic";
+  font: 11px "Cairo";
   color: #8ea4b6;
 }
 .effort-gauge > span {

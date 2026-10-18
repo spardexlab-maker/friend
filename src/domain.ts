@@ -112,6 +112,33 @@ export const stateSchema = z.object({
       }),
     )
     .default([]),
+  mealTemplates: z
+    .array(
+      z.object({
+        id: z.string(),
+        meal: mealSchema.omit({
+          id: true,
+          date: true,
+          time: true,
+          source: true,
+        }),
+        days: z.array(z.number().int().min(0).max(6)),
+        enabled: z.boolean(),
+      }),
+    )
+    .default([]),
+  trainingDecisions: z
+    .array(
+      z.object({
+        ...base,
+        status: z.enum(["rest", "postponed", "skipped"]),
+        sessionId: z.string(),
+        name: z.string(),
+        reason: z.string(),
+        nextDate: date.optional(),
+      }),
+    )
+    .default([]),
   restDates: z.array(date),
   meals: z.array(mealSchema),
   sets: z.array(setSchema),
@@ -232,6 +259,8 @@ export function initialState(): State {
     checkins: [],
     sensorReadings: [],
     wellness: { sleepGoal: 8, wakeTime: "07:00" },
+    mealTemplates: [],
+    trainingDecisions: [],
     journal: [],
     restDates: [],
     meals: [],

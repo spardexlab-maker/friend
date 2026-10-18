@@ -1,3 +1,7 @@
+import { Measurements } from "./measurements";
+import { VoiceCapture } from "./voice-capture";
+import { FamiliarMeals } from "./familiar-meals";
+import { TrainingDay } from "./training-day";
 import { TrainingIntelligence } from "./training-intelligence";
 import { SensorCoverage } from "./sensor-coverage";
 import { PerformanceHub, HealthInsights } from "./performance";
@@ -71,6 +75,7 @@ export function Dashboard() {
   const h = s.health.date === date ? s.health.values : {};
   return (
     <>
+      <TrainingDay />
       <PerformanceHub />
       <div className="section-line">
         <h3>التغذية وخطة اليوم</h3>
@@ -328,6 +333,7 @@ export function FoodPage() {
     t = nutrition(list);
   return (
     <>
+      <FamiliarMeals />
       <div className="summary-strip">
         <span>
           مجموع اليوم <b>{format(t.kcal)}</b> سعرة
@@ -397,6 +403,7 @@ export function WorkoutPage() {
   const actual = s.sets.filter((x) => x.sessionId === s.sessionId);
   return (
     <>
+      <TrainingDay />
       <div className="stage-row">
         {s.plans.map((p, i) => (
           <button
@@ -1017,6 +1024,7 @@ export function HealthPage() {
         </a>
       </div>
       <SensorCoverage />
+      <Measurements />
       <HealthInsights />
       <TrainingIntelligence />
       <details className="raw-health">
@@ -1036,6 +1044,9 @@ export function HealthPage() {
             ["weight", "الوزن", "كغ"],
             ["bodyFat", "نسبة الدهن من الجهاز", "%"],
             ["vo2Max", "VO₂ max", "مل/كغ/د"],
+            ["systolic", "الضغط الانقباضي المسجل", "mmHg"],
+            ["diastolic", "الضغط الانبساطي المسجل", "mmHg"],
+            ["bodyTemperature", "حرارة الجسم من المصدر", "°C"],
           ].map(([k, t, u]) => (
             <Metric
               key={k}
@@ -1238,19 +1249,19 @@ export function ChatPage() {
       setBusy(false);
     }
   }
-  async function voice() {
+  function voice() {
     setListening(true);
-    try {
-      const text = await dictate();
-      setDraft((d) => [d, text].filter(Boolean).join(" "));
-    } catch (e) {
-      notify((e as Error).message);
-    } finally {
-      setListening(false);
-    }
   }
   return (
     <Card className="chat">
+      {listening && (
+        <VoiceCapture
+          onClose={() => setListening(false)}
+          onText={(text) =>
+            setDraft((d) => [d, text].filter(Boolean).join(" "))
+          }
+        />
+      )}
       <div className="chat-heading">
         <span className="brand-icon">
           <Activity />

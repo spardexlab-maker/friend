@@ -152,6 +152,8 @@ export function AccountPanel() {
                     "journal",
                     "checkins",
                     "sensorReadings",
+                    "mealTemplates",
+                    "trainingDecisions",
                   ] as const) {
                     (merged[key] as unknown[]) = [
                       ...new Map(
