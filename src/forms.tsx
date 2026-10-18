@@ -89,7 +89,12 @@ export function Forms() {
               ? "تقدير Gemini — مؤكد منك"
               : String(item.source ?? "يدوي"),
           ),
-          id: kind === "meal" && item.id ? String(item.id) : id(),
+          id:
+            kind === "meal" && item.id
+              ? String(item.id)
+              : item.pendingFoodId || item.relatedFoodId
+                ? String(item.pendingFoodId || item.relatedFoodId)
+                : id(),
           time: String(item.time ?? new Date().toISOString()),
           name: str("name").trim(),
           kcal: num("kcal"),
@@ -105,6 +110,12 @@ export function Forms() {
           item.id && kind === "meal" ? "تعديل وجبة" : "إضافة وجبة",
           (d) => ({
             ...d,
+            pendingFoods:
+              item.pendingFoodId || item.relatedFoodId
+                ? d.pendingFoods.filter(
+                    (x) => x.id !== (item.pendingFoodId || item.relatedFoodId),
+                  )
+                : d.pendingFoods,
             meals:
               item.id && kind === "meal"
                 ? d.meals.map((x) => (x.id === m.id ? m : x))

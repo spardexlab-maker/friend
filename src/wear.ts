@@ -1,3 +1,4 @@
+import { eventSchema, mergeWearEvents } from "./wear-events";
 import { recovery, dailyHealth } from "./insights";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { useEffect, useRef } from "react";
@@ -10,33 +11,23 @@ type WearBridge = {
   acknowledge: (o: { ids: string }) => Promise<void>;
 };
 const bridge = registerPlugin<WearBridge>("WearBridge");
-const eventSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("heart"),
-    id: z.string(),
-    time: z.string().datetime(),
-    bpm: z.number().min(25).max(240),
-    accuracy: z.number().min(1).max(3),
-  }),
-  z.object({
-    type: z.literal("water"),
-    id: z.string(),
-    time: z.string().datetime(),
-    ml: z.number().positive().max(10000),
-  }),
-  z.object({
-    type: z.literal("set"),
-    id: z.string(),
-    time: z.string().datetime(),
-    sessionId: z.string(),
-    exerciseId: z.string(),
-    name: z.string(),
-    weight: z.number().min(0).max(2000),
-    reps: z.number().int().positive().max(300),
-    unit: z.enum(["kg", "lb"]),
-    basis: z.enum(["total", "each", "machine", "bodyweight"]),
-  }),
-]);
+function watchFood(
+  m: Pick<
+    State["meals"][number],
+    "name" | "grams" | "preparation" | "kcal" | "protein" | "carbs" | "fat"
+  > & { id?: string },
+) {
+  return {
+    id: m.id,
+    name: m.name.slice(0, 120),
+    grams: m.grams,
+    preparation: m.preparation.slice(0, 160),
+    kcal: m.kcal,
+    protein: m.protein,
+    carbs: m.carbs,
+    fat: m.fat,
+  };
+}
 export function useWearSync() {
   const { s, change, notify } = useApp();
   const ref = useRef(s);
@@ -52,6 +43,31 @@ export function useWearSync() {
       bridge
         .publish({
           json: JSON.stringify({
+            foodTemplates: d.mealTemplates
+              .filter((x) => x.enabled)
+              .slice(0, 20)
+              .map((x) => watchFood({ ...x.meal, id: x.id })),
+            recentFoods: [
+              ...new Map(
+                [...d.meals]
+                  .reverse()
+                  .map((m) => [
+                    JSON.stringify([
+                      m.name,
+                      m.grams,
+                      m.preparation,
+                      m.kcal,
+                      m.protein,
+                      m.carbs,
+                      m.fat,
+                    ]),
+                    m,
+                  ]),
+              ).values(),
+            ]
+              .slice(0, 10)
+              .map(watchFood),
+            foodPendingCount: d.pendingFoods.length,
             readiness: recovery(d, day).score ?? -1,
             sleepPercent:
               recovery(d, day).sleep.minutes == null
@@ -92,6 +108,8 @@ export function useWearSync() {
     s.sleep,
     s.checkins,
     s.wellness,
+    s.mealTemplates,
+    s.pendingFoods,
   ]);
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -106,59 +124,8 @@ export function useWearSync() {
           .filter((x) => x.success)
           .map((x) => x.data!);
         if (events.length) {
-          const success = await changed.current(
-            "مزامنة تسجيلات الساعة",
-            (d) => {
-              const next: State = {
-                ...d,
-                sets: [...d.sets],
-                water: [...d.water],
-                sensorReadings: [...d.sensorReadings],
-              };
-              for (const e of events) {
-                const date = dayKey(d.profile.dayStart, new Date(e.time));
-                if (
-                  e.type === "heart" &&
-                  !next.sensorReadings.some((x) => x.id === e.id)
-                )
-                  next.sensorReadings.push({
-                    id: e.id,
-                    date,
-                    time: e.time,
-                    bpm: e.bpm,
-                    accuracy: e.accuracy,
-                    source: "Galaxy Watch — حساس النبض",
-                  });
-                if (
-                  e.type === "water" &&
-                  !next.water.some((x) => x.id === e.id)
-                )
-                  next.water.push({
-                    id: e.id,
-                    date,
-                    time: e.time,
-                    source: "Galaxy Watch — Data Layer",
-                    ml: e.ml,
-                  });
-                if (e.type === "set" && !next.sets.some((x) => x.id === e.id))
-                  next.sets.push({
-                    id: e.id,
-                    date,
-                    time: e.time,
-                    source: "Galaxy Watch — Data Layer",
-                    sessionId: e.sessionId,
-                    exerciseId: e.exerciseId,
-                    name: e.name,
-                    weight: e.weight,
-                    reps: e.reps,
-                    unit: e.unit,
-                    basis: e.basis,
-                    rir: null,
-                    notes: "من الساعة؛ RIR غير مسجّل",
-                  });
-              }
-              return next;
-            },
+          const success = await changed.current("مزامنة تسجيلات الساعة", (d) =>
+            mergeWearEvents(d, events),
           );
           if (success)
             await bridge.acknowledge({

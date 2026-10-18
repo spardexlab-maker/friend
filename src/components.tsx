@@ -77,7 +77,7 @@ export function Card({
     <section className={`card ${className}`}>
       {title && (
         <div className="card-heading">
-          <span>{title}</span>
+          <span role="heading" aria-level={3}>{title}</span>
           {action}
         </div>
       )}

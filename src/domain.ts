@@ -75,6 +75,7 @@ export const messageSchema = z.object({
   time: z.string(),
   proposal: z.unknown().optional(),
   applied: z.boolean().optional(),
+  relatedFoodId: z.string().optional(),
 });
 export const healthSchema = z.object({
   syncedAt: z.string(),
@@ -109,6 +110,18 @@ export const stateSchema = z.object({
         title: z.string(),
         text: z.string(),
         category: z.string(),
+      }),
+    )
+    .default([]),
+  wearReceipts: z.array(z.string()).default([]),
+  pendingFoods: z
+    .array(
+      z.object({
+        ...base,
+        name: z.string().min(1).max(300),
+        grams: num(20000).nullable(),
+        preparation: z.string().max(1000),
+        original: z.string().max(2000),
       }),
     )
     .default([]),
@@ -259,6 +272,8 @@ export function initialState(): State {
     checkins: [],
     sensorReadings: [],
     wellness: { sleepGoal: 8, wakeTime: "07:00" },
+    wearReceipts: [],
+    pendingFoods: [],
     mealTemplates: [],
     trainingDecisions: [],
     journal: [],

@@ -1,3 +1,4 @@
+import { WatchFoodInbox } from "./watch-food-inbox";
 import { Measurements } from "./measurements";
 import { VoiceCapture } from "./voice-capture";
 import { FamiliarMeals } from "./familiar-meals";
@@ -75,6 +76,13 @@ export function Dashboard() {
   const h = s.health.date === date ? s.health.values : {};
   return (
     <>
+      {s.pendingFoods.length > 0 && (
+        <button className="watch-food-alert" onClick={() => setTab("food")}>
+          <Watch size={17} />
+          {s.pendingFoods.length} وصف وجبة من الساعة يحتاج مراجعتك
+          <ChevronLeft size={17} />
+        </button>
+      )}
       <TrainingDay />
       <PerformanceHub />
       <div className="section-line">
@@ -333,6 +341,7 @@ export function FoodPage() {
     t = nutrition(list);
   return (
     <>
+      <WatchFoodInbox />
       <FamiliarMeals />
       <div className="summary-strip">
         <span>
@@ -1193,11 +1202,25 @@ export function ChatPage() {
     [listening, setListening] = useState(false),
     [images, setImages] = useState<string[]>([]),
     [failure, setFailure] = useState("");
+  const [foodLink, setFoodLink] = useState(
+    s.messages.at(-1)?.relatedFoodId ?? "",
+  );
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [s.messages.length, busy]);
   useEffect(() => {
+    const foodDraft = sessionStorage.getItem("rafiq-food-draft");
+    if (foodDraft) {
+      try {
+        const p = JSON.parse(foodDraft);
+        setDraft(p.text);
+        setFoodLink(p.id);
+      } catch {
+        setDraft(foodDraft);
+      }
+      sessionStorage.removeItem("rafiq-food-draft");
+    }
     const raw = sessionStorage.getItem("rafiq-comparison");
     if (raw) {
       try {
@@ -1221,6 +1244,10 @@ export function ChatPage() {
       id: id(),
       role: "user",
       text: draft.trim(),
+      relatedFoodId:
+        foodLink && s.pendingFoods.some((x) => x.id === foodLink)
+          ? foodLink
+          : undefined,
       time: new Date().toISOString(),
     };
     const messages = retry ? s.messages : [...s.messages, message];
@@ -1237,6 +1264,7 @@ export function ChatPage() {
         text: String(result.reply),
         time: new Date().toISOString(),
         proposal: result.proposal ?? undefined,
+        relatedFoodId: messages.at(-1)?.relatedFoodId,
       };
       change("حفظ رد Gemini", (d) => ({
         ...d,
@@ -1344,6 +1372,14 @@ export function ChatPage() {
           </button>
         ))}
       </div>
+      {foodLink && s.pendingFoods.some((x) => x.id === foodLink) && (
+        <div className="food-draft-link">
+          المحادثة مرتبطة بوصف وجبة الساعة
+          <button className="text-button" onClick={() => setFoodLink("")}>
+            إلغاء الربط
+          </button>
+        </div>
+      )}
       <div className="suggestions">
         {["أريد أسجل فطوري", "خلصت تمرين اليوم", "راجع تقدمي حسب سجلي"].map(
           (x) => (

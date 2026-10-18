@@ -35,7 +35,7 @@ public class WearBridgePlugin extends Plugin {
     }
     @PluginMethod public void acknowledge(PluginCall call) {
         String raw=call.getString("ids","[]");
-        try { JSONArray ids=new JSONArray(raw);Set<String> remove=new HashSet<>();for(int i=0;i<ids.length();i++)remove.add(ids.getString(i));WearEvents.remove(getContext(),remove);call.resolve();}
+        try { JSONArray ids=new JSONArray(raw);Set<String> remove=new HashSet<>();for(int i=0;i<ids.length();i++)remove.add(ids.getString(i));PutDataMapRequest ack=PutDataMapRequest.create("/rafiq/ack/"+java.util.UUID.randomUUID());ack.getDataMap().putString("ids",raw);Wearable.getDataClient(getContext()).putDataItem(ack.asPutDataRequest().setUrgent()).addOnSuccessListener(x->{WearEvents.remove(getContext(),remove);call.resolve();}).addOnFailureListener(e->call.reject("تعذر إرسال تأكيد الحفظ؛ التسجيلات محفوظة وتُعاد المحاولة"));}
         catch(Exception e){call.reject("تعذرت معالجة تأكيد الساعة");}
     }
 }

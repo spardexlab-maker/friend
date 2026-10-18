@@ -154,6 +154,7 @@ export function AccountPanel() {
                     "sensorReadings",
                     "mealTemplates",
                     "trainingDecisions",
+                    "pendingFoods",
                   ] as const) {
                     (merged[key] as unknown[]) = [
                       ...new Map(
