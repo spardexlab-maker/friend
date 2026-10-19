@@ -1374,7 +1374,10 @@ export function ChatPage() {
         <div className="inline-error" role="alert">
           {failure}
           {!unsavedReply && (
-            <button className="text-button" onClick={() => submit(!draft.trim())}>
+            <button
+              className="text-button"
+              onClick={() => submit(!draft.trim())}
+            >
               إعادة المحاولة
             </button>
           )}
@@ -1454,12 +1457,13 @@ export function ChatPage() {
         >
           <Mic size={21} />
         </button>
-        <label className="attachment-button" aria-label="إرفاق صورة">
-          <Camera size={19} />
+        <label className="attachment-button">
+          <Camera size={19} aria-hidden="true" />
+          <span className="sr-only">إرفاق صورة</span>
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            hidden
+            className="attachment-input"
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
