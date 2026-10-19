@@ -205,7 +205,7 @@ function Checkin() {
               name="notes"
               maxLength={2000}
               defaultValue={saved?.notes}
-              placeholder="تعب، ضغط شغل، تغيير بروتينك…"
+              placeholder="تعب، ضغط شغل، تغيّر في روتينك…"
             />
           </label>
           <button className="primary" disabled={busy}>

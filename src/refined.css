@@ -33,6 +33,17 @@ h2,
 h3 {
   letter-spacing: 0 !important;
 }
+.message-text {
+  unicode-bidi: plaintext;
+  overflow-wrap: anywhere;
+  line-height: 1.9;
+}
+input[dir="ltr"] {
+  text-align: start;
+}
+textarea {
+  unicode-bidi: plaintext;
+}
 .sidebar {
   background: #101010;
   border-color: #252525;

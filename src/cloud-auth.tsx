@@ -136,7 +136,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 if (error) throw error;
                 if (!data.session)
                   setMessage(
-                    "وصلتك رسالة تأكيد على بريدك. افتحها وبعدها سجّل دخولك.",
+                    "راجع بريدك الإلكتروني ومجلد الرسائل غير المرغوب بها. افتح رابط التأكيد وبعدها سجّل دخولك.",
                   );
               } else {
                 const { error } = await supabase.auth.signInWithPassword({
@@ -156,7 +156,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                       ? "انتظر قبل طلب رسالة جديدة"
                       : code === "weak_password"
                         ? "اختار كلمة مرور أقوى"
-                        : "تعذر إكمال الدخول. راجع الاتصال وإعدادات البريد في Supabase.",
+                        : "تعذّر إكمال الطلب. تأكد من اتصال الإنترنت وحاول مرة ثانية.",
               );
             } finally {
               setBusy(false);

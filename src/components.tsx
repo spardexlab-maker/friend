@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { X, Plus, Utensils, Pencil, Trash2 } from "lucide-react";
 import type { Meal } from "./domain";
 export function Field({
@@ -28,6 +28,19 @@ export function Field({
       <input
         name={name}
         type={type}
+        dir={
+          [
+            "number",
+            "date",
+            "time",
+            "datetime-local",
+            "email",
+            "url",
+            "tel",
+          ].includes(type)
+            ? "ltr"
+            : "auto"
+        }
         defaultValue={value}
         min={min}
         max={max}
@@ -77,7 +90,9 @@ export function Card({
     <section className={`card ${className}`}>
       {title && (
         <div className="card-heading">
-          <span role="heading" aria-level={3}>{title}</span>
+          <span role="heading" aria-level={3}>
+            {title}
+          </span>
           {action}
         </div>
       )}
@@ -94,16 +109,44 @@ export function Dialog({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const panel = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    panel.current?.querySelector<HTMLButtonElement>(".close")?.focus();
+    return () => {
+      document.body.style.overflow = overflow;
+      if (previous?.isConnected) previous.focus();
+    };
+  }, []);
   return (
     <div
       className="modal-backdrop"
       onClick={onClose}
       onKeyDown={(e) => {
         if (e.key === "Escape") onClose();
+        if (e.key === "Tab") {
+          const controls = Array.from(
+            panel.current?.querySelectorAll<HTMLElement>(
+              'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]',
+            ) ?? [],
+          ).filter((node) => node.getClientRects().length > 0);
+          const first = controls[0],
+            last = controls.at(-1);
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last?.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first?.focus();
+          }
+        }
       }}
     >
       <section
         className="modal"
+        ref={panel}
         role="dialog"
         aria-modal="true"
         aria-label={title}

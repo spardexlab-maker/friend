@@ -1205,6 +1205,8 @@ export function ChatPage() {
   const [foodLink, setFoodLink] = useState(
     s.messages.at(-1)?.relatedFoodId ?? "",
   );
+  const submitLock = useRef(false);
+  const [unsavedReply, setUnsavedReply] = useState<Message | null>(null);
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -1233,7 +1235,8 @@ export function ChatPage() {
     }
   }, []);
   async function submit(retry = false) {
-    if (busy || (!retry && !draft.trim())) return;
+    if (submitLock.current || busy || unsavedReply || (!retry && !draft.trim()))
+      return;
     setFailure("");
     if (!s.settings.consent) {
       notify("فعّل مشاركة السجل مع Gemini من إعدادات الاتصال.");
@@ -1251,12 +1254,20 @@ export function ChatPage() {
       time: new Date().toISOString(),
     };
     const messages = retry ? s.messages : [...s.messages, message];
-    if (!retry) {
-      change("حفظ رسالة", (d) => ({ ...d, messages }));
-      setDraft("");
-    }
+    submitLock.current = true;
     setBusy(true);
     try {
+      if (!retry) {
+        const saved = await change("حفظ رسالة", (d) => ({
+          ...d,
+          messages: [...d.messages, message],
+        }));
+        if (!saved)
+          throw Error(
+            "تعذر حفظ رسالتك؛ النص بقي بالمسودة وما انرسل للذكاء الاصطناعي. راجع مساحة الجهاز وحاول مرة ثانية.",
+          );
+        setDraft("");
+      }
       const result = await askAI(s, messages, images);
       const reply: Message = {
         id: id(),
@@ -1266,14 +1277,21 @@ export function ChatPage() {
         proposal: result.proposal ?? undefined,
         relatedFoodId: messages.at(-1)?.relatedFoodId,
       };
-      change("حفظ رد Gemini", (d) => ({
+      const replySaved = await change("حفظ رد Gemini", (d) => ({
         ...d,
         messages: [...d.messages, reply],
       }));
+      if (!replySaved) {
+        setUnsavedReply(reply);
+        throw Error(
+          "وصل رد رفيق، لكن تعذر حفظه. أبقِ الصفحة مفتوحة وأعد حفظ الرد بعد معالجة مساحة الجهاز.",
+        );
+      }
       setImages([]);
     } catch (e) {
       setFailure((e as Error).message);
     } finally {
+      submitLock.current = false;
       setBusy(false);
     }
   }
@@ -1355,8 +1373,39 @@ export function ChatPage() {
       {failure && (
         <div className="inline-error" role="alert">
           {failure}
-          <button className="text-button" onClick={() => submit(true)}>
-            إعادة المحاولة
+          {!unsavedReply && (
+            <button className="text-button" onClick={() => submit(!draft.trim())}>
+              إعادة المحاولة
+            </button>
+          )}
+        </div>
+      )}
+      {unsavedReply && (
+        <div className="assistant-bubble">
+          <div className="message-text">{unsavedReply.text}</div>
+          <button
+            className="secondary"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const saved = await change("إعادة حفظ الرد المستلم", (d) => ({
+                  ...d,
+                  messages: d.messages.some((m) => m.id === unsavedReply.id)
+                    ? d.messages
+                    : [...d.messages, unsavedReply],
+                }));
+                if (saved) {
+                  setUnsavedReply(null);
+                  setFailure("");
+                  setImages([]);
+                }
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            حفظ الرد المستلم بدون طلب AI جديد
           </button>
         </div>
       )}
@@ -1434,7 +1483,7 @@ export function ChatPage() {
         />
         <button
           className="send"
-          disabled={busy || !draft.trim()}
+          disabled={busy || Boolean(unsavedReply) || !draft.trim()}
           aria-label="إرسال الرسالة"
         >
           <Send size={19} />

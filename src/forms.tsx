@@ -1,5 +1,5 @@
 import { cloudEnabled } from "./cloud-client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Check, Plus, Trash2, Camera, ArrowUpLeft } from "lucide-react";
 import { useApp } from "./app-state";
 import { Dialog, Field, Select, format } from "./components";
@@ -30,6 +30,8 @@ export function Forms() {
     setPhoto("");
     setScope("session");
   }, [modal]);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   if (!modal) return null;
   const kind = modal.kind,
     item = (modal.item ?? {}) as Rec;
@@ -54,6 +56,9 @@ export function Forms() {
   };
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     setError("");
     const f = new FormData(e.currentTarget),
       str = (k: string) => String(f.get(k) ?? ""),
@@ -335,6 +340,9 @@ export function Forms() {
       notify("تم الحفظ في سجلك");
     } catch (e) {
       setError((e as Error).message || "راجع القيم المدخلة");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   }
   const meal =
@@ -911,7 +919,7 @@ export function Forms() {
               {error}
             </div>
           )}
-          <button className="primary full" type="submit">
+          <button className="primary full" type="submit" disabled={saving}>
             حفظ <Check size={18} />
           </button>
         </form>
