@@ -51,9 +51,12 @@ export class CloudSync {
   async saveMeta() {
     await cacheSet(`sync:${this.owner}`, this.meta);
   }
-  async initialize() {
+  async initialize(localReady: () => void = () => {}) {
+    this.busy = true;
     this.meta = (await cacheGet<Meta>(`sync:${this.owner}`)) ?? this.meta;
+    if (this.stopped) return;
     this.report("loading");
+    localReady();
     try {
       await this.pull();
       if (
@@ -73,6 +76,8 @@ export class CloudSync {
       await this.flush();
     } catch (e) {
       this.report(navigator.onLine ? "error" : "offline", (e as Error).message);
+    } finally {
+      this.busy = false;
     }
     if (!this.stopped) {
       this.timer = setInterval(() => this.run(), 20000);

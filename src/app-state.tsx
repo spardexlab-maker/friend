@@ -70,6 +70,9 @@ export function Provider({ children }: { children: ReactNode }) {
   const queue = useRef(Promise.resolve());
   useEffect(() => {
     let alive = true;
+    const watchdog = setTimeout(() => {
+      if (alive) setFatal("فتح السجل المحلي أخذ وقت أطول من المعتاد. بياناتك ما انمسحت؛ أغلق التطبيق وافتحه مرة ثانية. لا تمسح بيانات التطبيق.");
+    }, 15000);
     loadState(owner)
       .then(async (x) => {
         if (alive) {
@@ -89,9 +92,17 @@ export function Provider({ children }: { children: ReactNode }) {
               (status) => alive && setSyncStatus(status),
             );
             engine.current = sync;
-            await sync.initialize();
+            await sync.initialize(() => {
+              if (alive) {
+                clearTimeout(watchdog);
+                setFatal("");
+                setReady(true);
+              }
+            });
           }
           if (!alive) return;
+          clearTimeout(watchdog);
+          setFatal("");
           setReady(true);
         }
       })
@@ -102,6 +113,7 @@ export function Provider({ children }: { children: ReactNode }) {
       );
     return () => {
       alive = false;
+      clearTimeout(watchdog);
       engine.current?.stop();
     };
   }, []);

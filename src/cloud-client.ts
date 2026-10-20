@@ -1,5 +1,6 @@
 import defaults from "./cloud-public.json";
 import { createClient } from "@supabase/supabase-js";
+import { cloudFetch } from "./cloud-fetch";
 const url = import.meta.env.VITE_SUPABASE_URL || defaults.url;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || defaults.key;
 export const cloudEnabled =
@@ -9,6 +10,7 @@ export const cloudEnabled =
 export const supabase =
   url && key
     ? createClient(url, key, {
+        global: { fetch: cloudFetch },
         auth: {
           persistSession: true,
           autoRefreshToken: true,
