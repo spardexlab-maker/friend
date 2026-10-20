@@ -4,7 +4,11 @@ import java.io.*;
 import org.json.*;
 public final class UpdateCheck {
  public static JSONObject check(String installed,String asset) throws Exception {
-  HttpURLConnection connection=(HttpURLConnection)new URL("https://api.github.com/repos/spardexlab-maker/friend/releases/latest").openConnection();
+  return check(installed,asset,null);
+ }
+ public static JSONObject check(String installed,String asset,android.net.Network network) throws Exception {
+  URL endpoint=new URL("https://api.github.com/repos/spardexlab-maker/friend/releases/latest");
+  HttpURLConnection connection=(HttpURLConnection)(network==null?endpoint.openConnection():network.openConnection(endpoint));
   connection.setConnectTimeout(15000);connection.setReadTimeout(20000);connection.setRequestProperty("Accept","application/vnd.github+json");connection.setRequestProperty("User-Agent","Rafiq-Android");
   try {
    int code=connection.getResponseCode();

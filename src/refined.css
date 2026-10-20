@@ -541,6 +541,35 @@ textarea {
   color: #492405;
   opacity: 1;
 }
+@media (max-width: 580px) {
+  .stage-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .stage-row button {
+    min-width: 0;
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+  main,
+  .content,
+  .grow {
+    min-width: 0;
+  }
+  .health-banner {
+    flex-wrap: wrap;
+  }
+  .health-banner h2 {
+    overflow-wrap: anywhere;
+  }
+  header {
+    height: auto;
+    min-height: 65px;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-block: 12px;
+  }
+}
 .sr-only,
 .attachment-input {
   position: absolute;

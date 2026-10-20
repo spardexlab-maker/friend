@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-test("narrow phone remains usable with text enlarged by 30 percent", async ({
+test("narrow phone remains usable with text enlarged by 100 percent", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 780 });
@@ -43,8 +43,8 @@ test("narrow phone remains usable with text enlarged by 30 percent", async ({
         }));
       for (const { n, size, line } of sizes) {
         n.dataset.auditSize = "true";
-        n.style.fontSize = `${size * 1.3}px`;
-        if (Number.isFinite(line)) n.style.lineHeight = `${line * 1.3}px`;
+        n.style.fontSize = `${size * 2}px`;
+        if (Number.isFinite(line)) n.style.lineHeight = `${line * 2}px`;
       }
     });
     const overflowing = await page.evaluate(() =>
@@ -54,7 +54,10 @@ test("narrow phone remains usable with text enlarged by 30 percent", async ({
             n.getBoundingClientRect().width &&
             n.getBoundingClientRect().right > innerWidth + 1,
         )
-        .map((n) => n.className)
+        .map(
+          (n) =>
+            n.tagName + "." + n.className + " " + n.textContent?.slice(0, 80),
+        )
         .slice(0, 10),
     );
     expect(overflowing, tab).toEqual([]);
