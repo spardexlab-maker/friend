@@ -78,6 +78,18 @@ export const messageSchema = z.object({
   relatedFoodId: z.string().optional(),
 });
 export const healthSchema = z.object({
+  metadata: z
+    .record(
+      z.string(),
+      z.object({
+        status: z.enum(["available", "missing", "denied", "error"]),
+        source: z.string().optional(),
+        time: z.string().optional(),
+        method: z.string().optional(),
+        count: z.number().optional(),
+      }),
+    )
+    .optional(),
   syncedAt: z.string(),
   date: z.string(),
   values: z.record(z.string(), z.number().nullable()),

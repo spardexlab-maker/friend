@@ -2,6 +2,20 @@ import { z } from "zod";
 import { dayKey, type State } from "./domain";
 export const eventSchema = z.discriminatedUnion("type", [
   z.object({
+    type: z.literal("exerciseHeart"),
+    id: z.string(),
+    time: z.string().datetime(),
+    bpm: z.number().min(25).max(240),
+  }),
+  z.object({
+    type: z.literal("exerciseSummary"),
+    id: z.string(),
+    time: z.string().datetime(),
+    name: z.string().max(200),
+    seconds: z.number().min(0).max(86400),
+    kcal: z.number().min(0).max(20000),
+  }),
+  z.object({
     type: z.literal("meal"),
     id: z.string(),
     time: z.string().datetime(),
@@ -60,12 +74,38 @@ export function mergeWearEvents(
     sensorReadings: [...d.sensorReadings],
     meals: [...d.meals],
     pendingFoods: [...d.pendingFoods],
+    journal: [...d.journal],
     wearReceipts: [...d.wearReceipts],
   };
   for (const e of events) {
     if (next.wearReceipts.includes(e.id)) continue;
     next.wearReceipts.push(e.id);
     const date = dayKey(d.profile.dayStart, new Date(e.time));
+    if (
+      e.type === "exerciseHeart" &&
+      !next.sensorReadings.some((x) => x.id === e.id)
+    )
+      next.sensorReadings.push({
+        id: e.id,
+        date,
+        time: e.time,
+        bpm: e.bpm,
+        accuracy: 0,
+        source: "Galaxy Watch — Health Services؛ جودة الإشارة غير رقمية",
+      });
+    if (
+      e.type === "exerciseSummary" &&
+      !next.journal.some((x) => x.id === e.id)
+    )
+      next.journal.push({
+        id: e.id,
+        date,
+        time: e.time,
+        source: "Galaxy Watch — Health Services",
+        title: "ملخص تمرين الساعة",
+        category: "تمرين",
+        text: `ملخص تمرين ${e.name}: ${(e.seconds / 60).toFixed(1)} دقيقة نشطة · ${Math.round(e.kcal)} سعرة تقديرية من Health Services. محفوظ للمراجعة؛ لا يضاف للحرق اليومي مرة ثانية.`,
+      });
     if (e.type === "heart" && !next.sensorReadings.some((x) => x.id === e.id))
       next.sensorReadings.push({
         id: e.id,

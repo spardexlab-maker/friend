@@ -1,4 +1,5 @@
 import { WatchFoodInbox } from "./watch-food-inbox";
+import { WatchConnection } from "./watch-connection";
 import { Measurements } from "./measurements";
 import { VoiceCapture } from "./voice-capture";
 import { FamiliarMeals } from "./familiar-meals";
@@ -989,6 +990,7 @@ export function HealthPage() {
   const values = s.health.date === date ? s.health.values : {};
   return (
     <>
+      <WatchConnection />
       <div className="health-banner">
         <span className="brand-icon">
           <Watch />

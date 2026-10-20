@@ -6,11 +6,12 @@ import { z } from "zod";
 import { useApp } from "./app-state";
 import { dayKey, nutrition, type State } from "./domain";
 type WearBridge = {
+  status: () => Promise<{ connected: boolean; count: number }>;
   publish: (o: { json: string }) => Promise<void>;
   pending: () => Promise<{ json: string }>;
   acknowledge: (o: { ids: string }) => Promise<void>;
 };
-const bridge = registerPlugin<WearBridge>("WearBridge");
+export const bridge = registerPlugin<WearBridge>("WearBridge");
 function watchFood(
   m: Pick<
     State["meals"][number],

@@ -1,4 +1,6 @@
 import type { State } from "./domain";
+import { sourceSamples } from "./health-quality";
+import type { HealthSample } from "@capgo/capacitor-health";
 export const clamp = (n: number, a = 0, b = 100) => Math.max(a, Math.min(n, b));
 export const mean = (a: number[]) =>
   a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
@@ -40,9 +42,11 @@ export function recovery(s: State, date: string) {
     dailyHealth(s, shiftDay(date, -i - 1)),
   ).filter(Boolean);
   const hrvs = previous
+    .filter((x) => x!.values.hrvDailyMedian === h?.values.hrvDailyMedian)
     .map((x) => x!.values.heartRateVariability)
     .filter((n): n is number => n != null && n > 0);
   const rhrs = previous
+    .filter((x) => x!.values.rhrDailyMedian === h?.values.rhrDailyMedian)
     .map((x) => x!.values.restingHeartRate)
     .filter((n): n is number => n != null && n > 0);
   const hrvBase = mean(hrvs),
@@ -162,16 +166,26 @@ export function heartSeries(s: State, date: string) {
     startDate?: string;
     value?: number;
   }[];
+  const imported = sourceSamples(
+    raw.filter((x) => x.dataType === "heartRate") as HealthSample[],
+  );
+  const occupied = new Set(
+    imported.map((x) => Math.floor(Date.parse(x.startDate) / 60000)),
+  );
   const items = [
-    ...raw
+    ...imported
       .filter(
         (x) =>
           x.dataType === "heartRate" && x.startDate && Number.isFinite(x.value),
       )
       .map((x) => ({ time: x.startDate!, bpm: x.value! })),
-    ...s.sensorReadings.filter((x) => x.date === date),
+    ...s.sensorReadings.filter(
+      (x) =>
+        x.date === date &&
+        !occupied.has(Math.floor(Date.parse(x.time) / 60000)),
+    ),
   ];
-  return items
+  return [...new Map(items.map((x) => [Date.parse(x.time), x])).values()]
     .filter((x) => x.bpm >= 25 && x.bpm <= 240)
     .sort((a, b) => a.time.localeCompare(b.time));
 }

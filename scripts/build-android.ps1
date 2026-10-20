@@ -1,3 +1,4 @@
+param([ValidateSet('Release','Debug')][string]$Configuration='Release')
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $projectRoot
@@ -7,10 +8,11 @@ if (Test-Path -LiteralPath $bundledJdk) { $env:JAVA_HOME = $bundledJdk }
 if ($LASTEXITCODE -ne 0) { throw 'Web build failed' }
 & npx.cmd cap sync android
 if ($LASTEXITCODE -ne 0) { throw 'Android sync failed' }
-& android/gradlew.bat -p android :app:assembleDebug :wear:assembleDebug --console=plain
+& android/gradlew.bat -p android ":app:assemble$Configuration" ":wear:assemble$Configuration" --console=plain
 if ($LASTEXITCODE -ne 0) { throw 'Android build failed' }
 $outputDir = Join-Path $projectRoot 'output/android'
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
-Copy-Item -LiteralPath 'android/app/build/outputs/apk/debug/app-debug.apk' -Destination (Join-Path $outputDir 'Rafiq-phone.apk')
-Copy-Item -LiteralPath 'android/wear/build/outputs/apk/debug/wear-debug.apk' -Destination (Join-Path $outputDir 'Rafiq-watch.apk')
+$variant=$Configuration.ToLowerInvariant()
+Copy-Item -LiteralPath "android/app/build/outputs/apk/$variant/app-$variant.apk" -Destination (Join-Path $outputDir 'Rafiq-phone.apk')
+Copy-Item -LiteralPath "android/wear/build/outputs/apk/$variant/wear-$variant.apk" -Destination (Join-Path $outputDir 'Rafiq-watch.apk')
 Write-Output "APKs saved to $outputDir"

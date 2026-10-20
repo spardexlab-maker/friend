@@ -8,6 +8,18 @@
   background: #0b0b0b;
   color-scheme: dark;
 }
+.watch-connection {
+  margin-bottom: 20px;
+}
+.connection-steps {
+  padding-inline-start: 24px;
+  color: #c8c8c8;
+  font-size: 13px;
+  line-height: 2;
+}
+.watch-connection .button-row {
+  flex-wrap: wrap;
+}
 body {
   background: #0b0b0b;
   font-size: 14px;

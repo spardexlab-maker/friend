@@ -1,4 +1,5 @@
 import { summarizeSleep } from "./sleep-data";
+import { sourceSamples, median } from "./health-quality";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { Health, type HealthDataType } from "@capgo/capacitor-health";
 import { SpeechRecognition } from "@capgo/capacitor-speech-recognition";
@@ -49,10 +50,12 @@ export async function syncHealth(
     values: {},
     samples: [],
     errors: [],
+    metadata: {},
   };
   await Promise.all(
     healthTypes.map(async (dataType) => {
       if (!auth.readAuthorized.includes(dataType)) {
+        result.metadata![dataType] = { status: "denied" };
         result.errors.push(`${dataType}: لا توجد صلاحية`);
         return;
       }
@@ -68,25 +71,27 @@ export async function syncHealth(
             await extra.read({ start: startDate, end: endDate })
           ).value;
         } else if (dataType === "heartRate") {
-          const { samples } = await Health.readSamples({
+          const response = await Health.readSamples({
             dataType,
             startDate,
             endDate,
-            limit: 500,
+            limit: 0,
           });
+          const samples = sourceSamples(response.samples).filter(
+            (x) => x.value >= 25 && x.value <= 240,
+          );
+          result.metadata![dataType] = {
+            status: samples.length ? "available" : "missing",
+            source: samples[0]?.sourceName || samples[0]?.sourceId,
+            time: samples.at(-1)?.startDate,
+            count: samples.length,
+            method: "متوسط عينات اليوم من مصدر واحد",
+          };
           result.samples.push(...samples);
           result.values.heartRate = samples.length
             ? samples.reduce((sum, x) => sum + x.value, 0) / samples.length
             : null;
-        } else if (
-          [
-            "steps",
-            "distance",
-            "calories",
-            "heartRate",
-            "restingHeartRate",
-          ].includes(dataType)
-        ) {
+        } else if (["steps", "distance", "calories"].includes(dataType)) {
           const { samples } = await Health.queryAggregated({
             dataType,
             startDate,
@@ -109,39 +114,88 @@ export async function syncHealth(
           const { workouts } = await Health.queryWorkouts({
             startDate,
             endDate,
-            limit: 100,
+            limit: 0,
           });
           result.samples.push(
             ...workouts.map((x) => ({ ...x, dataType: "workouts" })),
           );
         } else {
-          const { samples } = await Health.readSamples({
+          const response = await Health.readSamples({
             dataType,
             startDate:
               dataType === "sleep"
                 ? new Date(Date.parse(startDate) - 43200000).toISOString()
                 : startDate,
             endDate,
-            limit: 100,
+            limit: 0,
           });
+          const samples =
+            dataType === "sleep"
+              ? response.samples
+              : sourceSamples(response.samples);
+          result.metadata![dataType] = {
+            status: samples.length ? "available" : "missing",
+            source: samples[0]?.sourceName || samples[0]?.sourceId,
+            time: samples.at(-1)?.endDate,
+            count: samples.length,
+            method:
+              dataType === "heartRateVariability"
+                ? "وسيط عينات اليوم؛ ليست قراءة ليلية فقط"
+                : "آخر عينة من مصدر واحد",
+          };
           if (dataType !== "sleep") result.samples.push(...samples);
           if (dataType === "sleep") {
             const summarized = summarizeSleep(samples, date);
             result.samples.push(...summarized.samples);
             result.values.sleep = summarized.minutes;
             result.values.sleepHasStages = summarized.hasStages ? 1 : 0;
+            const measured = summarized.samples.at(-1);
+            result.metadata!.sleep = {
+              status: summarized.minutes == null ? "missing" : "available",
+              source: measured?.sourceName || measured?.sourceId,
+              time: measured?.endDate,
+              count: summarized.samples.length,
+              method: summarized.hasStages
+                ? "مراحل النوم بعد إزالة التداخل"
+                : "مدة الجلسة؛ لا توجد مراحل نوم",
+            };
           } else if (dataType === "bloodPressure") {
             const last = [...samples].sort((a, b) =>
               b.endDate.localeCompare(a.endDate),
             )[0];
             result.values.systolic = last?.systolic ?? null;
             result.values.diastolic = last?.diastolic ?? null;
+          } else if (
+            dataType === "heartRateVariability" ||
+            dataType === "restingHeartRate"
+          ) {
+            result.values[dataType] = median(
+              samples.filter((x) => x.value > 0).map((x) => x.value),
+            );
+            result.values[
+              dataType === "heartRateVariability"
+                ? "hrvDailyMedian"
+                : "rhrDailyMedian"
+            ] = 1;
+            result.metadata![dataType]!.method =
+              "وسيط عينات اليوم من مصدر واحد";
           } else
             result.values[dataType] =
               [...samples].sort((a, b) => b.endDate.localeCompare(a.endDate))[0]
                 ?.value ?? null;
         }
+        result.metadata![dataType] ??= {
+          status:
+            result.values[dataType] != null ||
+            (dataType === "workouts" &&
+              result.samples.some((x: any) => x.dataType === "workouts"))
+              ? "available"
+              : "missing",
+          source: "Health Connect",
+          method: "تجميع النظام",
+        };
       } catch {
+        result.metadata![dataType] = { status: "error" };
         result.errors.push(`${dataType}: تعذرت القراءة`);
       }
     }),

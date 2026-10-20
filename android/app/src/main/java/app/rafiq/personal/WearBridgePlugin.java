@@ -9,6 +9,9 @@ import java.util.Set;
 
 @CapacitorPlugin(name="WearBridge")
 public class WearBridgePlugin extends Plugin {
+    @PluginMethod public void status(PluginCall call) {
+        Wearable.getNodeClient(getContext()).getConnectedNodes().addOnSuccessListener(nodes->{JSObject out=new JSObject();out.put("connected",!nodes.isEmpty());out.put("count",nodes.size());call.resolve(out);}).addOnFailureListener(e->call.reject("تعذر فحص اتصال الساعة"));
+    }
     @PluginMethod public void printCourse(PluginCall call) {
         getActivity().runOnUiThread(()->{
             try {

@@ -79,10 +79,33 @@ export function SensorCoverage() {
           <div key={key}>
             <b>{label}</b>
             <small className={h?.values[key] != null ? "available" : ""}>
-              {h?.values[key] != null
-                ? "بيانات متاحة"
-                : "غير متاح / بانتظار المزامنة"}
+              {h?.metadata?.[key]?.status === "denied"
+                ? "صلاحية القراءة غير ممنوحة"
+                : h?.metadata?.[key]?.status === "error"
+                  ? "تعذرت القراءة؛ أعد المزامنة"
+                  : h?.values[key] != null
+                    ? "بيانات متاحة"
+                    : "غير متاح / بانتظار المزامنة"}
             </small>
+            {h?.metadata?.[key]?.source && (
+              <small>{h.metadata[key].source}</small>
+            )}
+            {h?.metadata?.[key]?.time && (
+              <small>
+                القياس:{" "}
+                {new Date(h.metadata[key].time!).toLocaleString("ar-IQ", {
+                  timeZone: "Asia/Baghdad",
+                })}
+              </small>
+            )}
+            {h?.metadata?.[key]?.method && (
+              <small>
+                {h.metadata[key].method}{" "}
+                {h.metadata[key].count != null
+                  ? `· ${h.metadata[key].count} عينة`
+                  : ""}
+              </small>
+            )}
           </div>
         ))}
       </div>
